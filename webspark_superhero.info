@@ -1,0 +1,23 @@
+name = Webspark Superhero
+description = Allows creation of hero, video hero, and hero slider panes.
+package = ASU Webspark
+version = 7.x-1.0
+core = 7.x
+project = webspark_superhero
+dependencies[] = ctools
+dependencies[] = features
+dependencies[] = flexslider
+dependencies[] = list
+dependencies[] = options
+dependencies[] = image
+dependencies[] = link
+dependencies[] = panopoly_widgets
+dependencies[] = text
+stylesheets[all][] = css/superhero.css
+
+;explanation = Field type(s) in use - see <a href="/admin/reports/fields">Field list</a>
+;features[features_api][] = api:2
+features[field_base][] = field_superhero_items
+features[field_base][] = field_superhero_optionset
+features[field_instance][] = fieldable_panels_pane-webspark_superhero-field_superhero_items
+features[field_instance][] = fieldable_panels_pane-webspark_superhero-field_superhero_optionset

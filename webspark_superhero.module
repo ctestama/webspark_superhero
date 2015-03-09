@@ -1,0 +1,59 @@
+<?php
+
+include_once('webspark_superhero.superhero.inc');
+
+function webspark_superhero_menu_alter(&$items) {
+    $items['admin/config/media/flexslider']['title'] = 'Webspark Optionsets';
+}
+
+/**
+ * Implementation of hook_entity_info_alter()
+ */
+function webspark_superhero_entity_info_alter(&$entity_info) {
+
+  // ASU Spotlight
+  $entity_info['fieldable_panels_pane']['bundles']['webspark_superhero'] = array(
+    'label' => t('Add Webspark Superhero'),
+    'description' => t('Add Webspark Superhero'),
+    'pane category' => t('Custom'),
+    'pane top level' => TRUE,
+    'pane icon' => drupal_get_path('module', 'panopoly_widgets') . '/images/icon_spotlight.png',
+    'admin' => array(
+      'path' => 'admin/structure/fieldable-panels-panes/manage/%fieldable_panels_panes_type',
+      'bundle argument' => 4,
+      'real path' => 'admin/structure/fieldable-panels-panes/manage/webspark_superhero',
+      'access arguments' => array('administer fieldable panels panes'),
+    ),
+  );
+
+  unset($entity_info['fieldable_panels_pane']['bundles']['spotlight']);
+}
+
+
+
+/**
+*Implements hook_theme()
+*defining theming function to
+**/
+function webspark_superhero_theme() {
+  return array(
+    // ASU Spotlight container
+    'webspark_superhero' => array(
+      'variables' => array('items' => array(), 'settings' => array()),
+      'template' => 'theme/webspark_superhero',
+      'file' => 'theme/webspark_superhero.theme.inc',
+    ),
+
+    // Slide container
+    'webspark_superhero_list' => array(
+      'variables' => array('items' => array(), 'settings' => array()),
+      'file' => 'theme/webspark_superhero.theme.inc',
+    ),
+
+    // Slide item
+    'webspark_superhero_list_item' => array(
+      'variables' => array('item' => array(), 'settings' => array(), 'caption' => ''),
+      'file' => 'theme/webspark_superhero.theme.inc',
+    ),
+  );
+}
