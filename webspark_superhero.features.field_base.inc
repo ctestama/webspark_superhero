@@ -62,36 +62,7 @@ function webspark_superhero_field_default_field_bases() {
     'translatable' => 0,
     'type' => 'list_text',
   );
-   /*
-  // Exported field_base: 'field_webspark_superhero_items'
-  $field_bases['field_hero_item'] = array(
-    'active' => 1,
-    'cardinality' => 1,
-    'deleted' => 0,
-    'entity_types' => array(),
-    'field_name' => 'field_hero_item',
-    'foreign keys' => array(
-      'fid' => array(
-        'columns' => array(
-          'fid' => 'fid',
-        ),
-        'table' => 'file_managed',
-      ),
-    ),
-    'indexes' => array(
-      'fid' => array(
-        0 => 'fid',
-      ),
-    ),
-    'locked' => 0,
-    'module' => 'webspark_superhero',
-    'settings' => array(
-      'default_image' => 0,
-      'uri_scheme' => 'public',
-    ),
-    'translatable' => 0,
-    'type' => 'webspark_superhero',
-  );*/
+   
 
   return $field_bases;
 }

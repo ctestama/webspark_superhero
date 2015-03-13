@@ -95,21 +95,6 @@ function webspark_superhero_field_settings_form($field, $instance, $has_data) {
     '#upload_location' => $settings['uri_scheme'] . '://default_images/',
     );
 
-    $type_options = array(
-      'image' => 'Image',
-      'slider' => 'Slider',
-      'video' => 'Video',
-    );
-    /*
-
-    $form['default_type'] = array(
-    '#type' => 'radios',
-    '#title' => t('Default Superhero Type'),
-    '#options' => $type_options,
-    '#default_value' => 'Image',
-    '#description' => t('Select the default Superhero type.'),
-  );*/
-
     return $form;
   }
 
@@ -131,7 +116,7 @@ function webspark_superhero_field_settings_form($field, $instance, $has_data) {
         'label' => t('Webspark Superhero'),
         'field types' => array('webspark_superhero'),
         'settings' => array(
-            'image_style' => 'hero_bg_img',
+            'image_style' => 'webspark_hero',
             'caption' => FALSE,
             'optionset' => 'default',
             ),
@@ -178,193 +163,305 @@ function webspark_superhero_field_settings_form($field, $instance, $has_data) {
   /**
   * Implements hook_field_formatter_view().
   */
-  function webspark_superhero_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
-    $element = array();
+function webspark_superhero_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $element = array();
 
-    if (!empty($items)) {
-      foreach ($items as $key => $item) {
+  if (!empty($items)) {
+    $sh_settings = drupal_json_decode($items[0]['field_settings']);
+    
+    foreach ($items as $key => $item) {
 
-        $tmp = $item;
-        $item = array();
-        $item['item'] = $tmp;
+      $tmp = $item;
+      $item = array();
+      $item['item'] = $tmp;
 
-        // Setup the variables for calling theme_image_style
-        $item['slide']['path'] = $item['item']['uri'];
-        $item['slide']['style_name'] = $display['settings']['image_style'];
-        $item['slide']['width'] = $item['item']['metadata']['width'];
-        $item['slide']['height'] = $item['item']['metadata']['height'];
-        $item['slide']['alt'] = $item['item']['alt'];
-        $item['slide']['title'] = $item['item']['title'];
+      // Setup the variables for calling theme_image_style
+      $item['slide']['path'] = $item['item']['uri'];
+      $item['slide']['style_name'] = $display['settings']['image_style'];
+      $item['slide']['width'] = $item['item']['metadata']['width'];
+      $item['slide']['height'] = $item['item']['metadata']['height'];
+      $item['slide']['alt'] = $item['item']['alt'];
+      $item['slide']['title'] = $item['item']['title'];
 
-        // Render the slide item
-        // If not style set, we have to call theme_image since theme_image_style
-        // doesn't auto-fallback to full size image
-        if (!empty($item['slide']['style_name'])) {
-          // Generate the HTML for the slide
-          $item['slide'] = theme('image_style', $item['slide']);
-        }
-        else {
-          // Generate the HTML for the slide
-          $item['slide'] = theme('image', $item['slide']);
-        }
-
-        // Check caption settings
-        if ($display['settings']['caption']) {
-          $item['caption'] = filter_xss($item['item']['title']);
-        }
-
-        $items[$key] = $item;
+      // Render the slide item
+      // If no style set, we have to call theme_image since theme_image_style
+      // doesn't auto-fallback to full size image
+      if (!empty($item['slide']['style_name'])) {
+        // Generate the HTML for the slide
+        $item['slide'] = theme('image_style', $item['slide']);
       }
-      if(!empty($entity->field_optionset)) {
-          $display['settings']['optionset'] = $entity->field_optionset['und'][0]['value'];
+      else {
+        // Generate the HTML for the slide
+        $item['slide'] = theme('image', $item['slide']);
+      }
+
+      // Check caption settings
+      if ($display['settings']['caption']) {
+        $item['caption'] = filter_xss($item['item']['title']);
+      }
+
+      $items[$key] = $item;
+    }
+    if(!empty($entity->field_optionset)) {
+        $display['settings']['optionset'] = $entity->field_optionset['und'][0]['value'];
+    } else {
+
+    }
+    $element = array(
+    '#theme' => 'webspark_superhero',
+    '#items' => $items,
+    '#settings' => $display['settings'],
+    );
+  }
+
+  return $element;
+}
+
+/**
+*Implements hook_form_alter().
+* This allows us to populate the proper options and default for selecting optionsets on the form
+*/
+function webspark_superhero_form_alter(&$form, &$form_state, $form_id) {
+
+  if($form_id=='fieldable_panels_panes_fieldable_panels_pane_content_type_edit_form'&&$form['#bundle']=='webspark_superhero') {
+    variable_set('panopoly_magic_live_preview', 0);
+
+    //TODO: ADD IN AJAX AND STARTING FORM STATES TO THE FORM
+
+    //$form['field_superhero_items']['und']['#cardinality'] = 1;
+
+    $form['field_superhero_items']['#states'] = array(
+        'visible' => array(':input[name="super_type"]' => array(
+          '!value' => false
+          ),
+        ),
+    );
+
+    $form['field_superhero_optionset']['#states'] = array(
+        'visible' => array(':input[name="super_type"]' => array(
+          'value' => 'slider'
+          ),
+        ),
+    );
+
+    $form['field_superhero_items']['und']['add_more']['#states'] = array(
+        'visible' => array(':input[name="super_type"]' => array(
+          'value' => 'slider'
+          ),
+        ),
+    );
+
+    $form_set = array();
+    if(isset($form['#entity']->field_superhero_items['und'][0]['field_settings'])) {
+      $form_set = drupal_json_decode($form['#entity']->field_superhero_items['und'][0]['field_settings']);
+    }
+
+    $form['super_type'] = array(
+      '#type' => 'radios',
+      '#title' => t('Superhero Type'),
+      '#description' => t('Please select a superhero type.'),
+      '#options' => array(
+        'image' => t('Image'),
+        'slider' => t('Slider'),
+        'video' =>  t('Video'),
+      ),
+      '#ajax' => array(
+          'event' => 'change',
+          'callback' => 'webspark_superhero_top_submit',
+      ),
+      '#default_value' => isset($form_set['super_type']) ? $form_set['super_type'] : NULL,
+    );
+
+    $form['hero_size'] = array(
+      '#type' => 'radios',
+      '#title' => t('Superhero Responsive Size'),
+      '#description' => t('Change how the image/video scales (fixed-height or auto-scaled).'),
+      '#options' => array(
+        'sh-fixed-height' => t('Fixed Height'),
+        'sh-auto-height' => t('Auto-scaled'),
+      ),
+      '#ajax' => array(
+          'event' => 'change',
+          'callback' => 'webspark_superhero_change_settings',
+
+      ),
+      '#default_value' => isset($form_set['hero_size']) ? $form_set['hero_size'] : 'sh-auto-height',
+      '#states' => array(
+        'visible' => array(
+          ':input[name="super_type"]' => array(
+            '!value' => 'slider'
+          ),
+        ),
+      ),
+    );
+
+    $form['jumbo_size'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Jumbo'),
+      '#description' => t('Would you like that jumbo-sized?'),
+      '#ajax' => array(
+          'event' => 'change',
+          'callback' => 'webspark_superhero_change_settings',
+
+      ),
+      '#default_value' => isset($form_set['jumbo_size']) ? $form_set['jumbo_size'] : 0,
+      '#states' => array(
+        'visible' => array(':input[name="hero_size"]' => array(
+          'value' => 'sh-fixed-height'
+          ),
+        ),
+      ),
+    );
+
+    $form['responsive'] = array(
+      '#type' => 'radios',
+      '#title' => t('Responsive Text Behavior'),
+      '#description' => t('Please select a responsive behavior for the text overlay.'),
+      '#options' => array(
+        'sh-dropdown' => t('Dropdown'),
+        'sh-overlayed' => t('Overlayed'),
+      ),
+      '#ajax' => array(
+          'event' => 'change',
+          'callback' => 'webspark_change_settings',
+      ),
+      '#default_value' => isset($form_set['responsive']) ? $form_set['responsive'] : 'sh-dropdown',
+    );
+
+
+    $optionsets = array();
+
+    ctools_include('export');
+    foreach (flexslider_optionset_load_all() as $name => $optionset) {
+      $optionsets[$name] = check_plain($optionset->title);
+    }
+
+    $form['field_superhero_optionset']['und']['#options'] = $optionsets;
+
+    if(isset($form['#entity']->field_optionset) && !empty($form['#entity']->field_optionset)) {
+       $form['field_optionset']['und']['#default_value'] =
+       $form['#entity']->field_optionset['und'][0]['value'];
+    }
+
+    $settings = '';
+    $stype = '';
+
+    if(isset($form_state['values']['super_type'])&&$form_state['values']['super_type']!=NULL) {
+
+       $settings = array(
+         'super_type' => $form_state['values']['super_type'],
+         'hero_size' => $form_state['values']['hero_size'],
+         'jumbo_size' => $form_state['values']['jumbo_size'],
+         'responsive' => $form_state['values']['responsive'],
+       );
+       $encoded = drupal_json_encode($settings);
+
+       $form['field_superhero_items']['und'][0]['field_settings']['#value'] = $encoded;
+    }
+
+    $image = array('jpg jpeg png gif');
+    $vids = array('mp4 ogv webm');
+
+
+    if(isset($form_state['triggering_element'])&&$form_state['triggering_element']['#value']!='Remove'&&$form_state['triggering_element']['#value']!='Upload') {
+      if(isset($form_state['values']['super_type'])&&$form_state['values']['super_type']=='video') {
+        $sup_type = $vids;
       } else {
-
+        $sup_type = $image;
       }
-      $element = array(
-      '#theme' => 'webspark_superhero',
-      '#items' => $items,
-      '#settings' => $display['settings'],
-      );
+    } else {
+      if(isset($form_state['entity']->field_superhero_items['und'][0]['field_settings'])) {
+        $sets = drupal_json_decode($form_state['entity']->field_superhero_items['und'][0]['field_settings']);
+        if($sets['super_type']=='video') {
+          $sup_type = $vids;
+        } else {
+          $sup_type = $image;
+        }
+      } else {
+        $sup_type = $image;
+      }
     }
 
-    return $element;
+    $form['field_superhero_items']['und'][0]['fid']['#upload_validators'] = array(
+        'file_validate_extensions' => $sup_type,
+        'file_validate_size' => array(32*1024*1024),
+    );
   }
-
-  /**
-  *Implements hook_form_alter().
-  * This allows us to populate the proper options and default for selecting optionsets on the form
-  */
-  function webspark_superhero_form_alter(&$form, &$form_state, $form_id) {
-
-    if($form_id=='fieldable_panels_panes_fieldable_panels_pane_content_type_edit_form'&&$form['#bundle']=='webspark_superhero') {
-      variable_set('panopoly_magic_live_preview', 0);
-
-      //TODO: ADD IN AJAX AND STARTING FORM STATES TO THE FORM
-
-      //$form['field_superhero_items']['und']['#cardinality'] = 1;
-
-      //$type_value = $form_state['values']['super_type']['und'][0]['value'];
-
-      $form['field_superhero_items']['#states'] = array(
-          'visible' => array(':input[name="super_type"]' => array(
-            '!value' => false
-            ),
-          ),
-      );
-
-      $form['field_superhero_optionset']['#states'] = array(
-          'visible' => array(':input[name="super_type"]' => array(
-            'value' => 'slider'
-            ),
-          ),
-      );
-
-      $form['field_superhero_items']['und']['add_more']['#states'] = array(
-          'visible' => array(':input[name="super_type"]' => array(
-            'value' => 'slider'
-            ),
-          ),
-      );
-
-      $form['field_superhero_items']['und'][1]['#states'] = array(
-          'visible' => array(':input[name="super_type"]' => array(
-            'value' => 'slider'
-            ),
-          ),
-      );
-      //change to false for starting state
-
-      //add wrapper for ajax form replacement
-      $form['field_superhero_items']['und']['#prefix'] = '<div id="superhero_replace">';
-      $form['field_superhero_items']['und']['#suffix'] = '</div>';
-
-      $form['super_type'] = array(
-        '#type' => 'radios',
-        '#title' => t('Superhero Type'),
-        '#description' => t('Please select a superhero type.'),
-        '#options' => array(
-          'image' => t('Image'),
-          'slider' => t('Slider'),
-          'video' =>  t('Video'),
-        ),
-        '#ajax' => array(
-            'event' => 'change',
-            'callback' => 'webspark_superhero_change_settings',
-            //'wrapper' => 'superhero_replace',
-            //'method' => 'replace',
-            //'effect' => 'fade',
-        ),
-      );
-
-      $form['hero_size'] = array(
-        '#type' => 'radios',
-        '#title' => t('Superhero Responsive Size'),
-        '#description' => t('Change how the image/video scales (fixed-height or auto-scaled).'),
-        '#options' => array(
-          'sh-fixed-height' => t('Fixed Height'),
-          'sh-auto-height' => t('Auto-scaled'),
-        ),
-        '#ajax' => array(
-            'event' => 'change',
-            'callback' => 'webspark_superhero_change_settings',
-            //'wrapper' => 'superhero_replace',
-            //'method' => 'replace',
-            //'effect' => 'fade',
-        ),
-        '#default_value' => 'sh-auto-height',
-      );
-
-      $form['jumbo_size'] = array(
-        '#type' => 'checkbox',
-        '#title' => t('Jumbo'),
-        '#description' => t('Would you like that jumbo-sized?'),
-        '#ajax' => array(
-            'event' => 'change',
-            'callback' => 'webspark_superhero_change_settings',
-            //'wrapper' => 'superhero_replace',
-            //'method' => 'replace',
-            //'effect' => 'fade',
-        ),
-        '#default_value' => 0,
-        '#states' => array(
-          'visible' => array(':input[name="hero_size"]' => array(
-            'value' => 'sh-fixed-height'
-            ),
-          ),
-        ),
-      );
-      unset($form['field_superhero_items']['und'][1]);
+}
 
 
-      $optionsets = array();
 
-      ctools_include('export');
-      foreach (flexslider_optionset_load_all() as $name => $optionset) {
-        $optionsets[$name] = check_plain($optionset->title);
+/***
+*Callback function for top-level superhero type selection
+*
+***/
+function webspark_superhero_top_submit($form, &$form_state) {
+    $selector = ".superhero_select";
+    $commands = array();
+
+    $items = array();
+    $inputs = array();
+    if(isset($form_state['values']['field_superhero_items']['und'])) {
+      $items = $form_state['values']['field_superhero_items']['und'];
+      $inputs = $form_state['input']['field_superhero_items']['und'];
+      $count = 0;
+
+      foreach($items as &$item) {
+        if(isset($item['fid']['fid'])) {
+
+         $item['fid'] = '';
+         $inputs[$count]['fid'] = '';
+
+         $fid = $form['field_superhero_items']['und'][$count]['fid'];
+         $fid['#value'] = '';
+         $commands[] = ajax_command_replace(".form-item-field-superhero-items-und-$count-fid", drupal_render($fid));
+
+         $count++;
+        }
       }
-
-      $form['field_superhero_optionset']['und']['#options'] = $optionsets;
-
-      if(isset($form['#entity']->field_optionset) && !empty($form['#entity']->field_optionset)) {
-         $form['field_optionset']['und']['#default_value'] =
-         $form['#entity']->field_optionset['und'][0]['value'];
-      }
-
-      dpm($form, 'Form');
-      dpm($form_state, 'form state in widget_form');
-
     }
+
+    $form_state['values']['field_superhero_items']['und'] = $items;
+    $form_state['input']['field_superhero_items']['und'] = $inputs;
+
+    /*
+    $form_state['input']['field_superhero_items']['und'][0]['fid'] = '';
+    $form_state['values']['field_superhero_items']['und'][0]['fid'] = '';
+    $fid = $form['field_superhero_items']['und'][0]['fid'];
+    $fid['#value'] = '';
+    */
+
+    $commands[] = ajax_command_replace("#field_settings_hidden0", drupal_render($form['field_superhero_items']['und'][0]['field_settings']));
+    //$commands[] = ajax_command_replace("#superhero_file_field0", drupal_render($stub));form-item-field-superhero-items-und-0
+    //$commands[] = ajax_command_replace(".form-item-field-superhero-items-und-0-fid", drupal_render($fid));
+    $commands[] = ajax_command_html('.file', '');
+
+    if($form_state['values']['super_type']!='slider') {
+      $commands[] = ajax_command_invoke($selector, 'hide');
+    } else {
+      $commands[] = ajax_command_invoke($selector, 'show');
+    }
+
+    $form_state['build_info']['args']['reset'] = true;
+
+    return array('#type' => 'ajax', '#commands' => $commands);
+
   }
+
 
 
   /**
   *Callback for ajax form
   *
   **/
-  function webspark_suphero_change_settings($form, &$form_state) {
-
+  function webspark_superhero_change_settings($form, &$form_state) {
+    $selector = ".superhero_select";
     $commands = array();
-    $commands[] = ajax_command_replace("#superhero_replace", drupal_render($form['field_superhero_items']));
+
+    $commands[] = ajax_command_replace("#field_settings_hidden0", drupal_render($form['field_superhero_items']['und'][0]['field_settings']));
+    //$commands[] = ajax_command_replace("#superhero_file_field", drupal_render($form['field_superhero_items']['und'][0]['fid']));
+    //$commands[] = ajax_command_replace("#super_field_wrap", drupal_render($form));
+
     return array('#type' => 'ajax', '#commands' => $commands);
 
   }
@@ -375,11 +472,28 @@ function webspark_superhero_field_settings_form($field, $instance, $has_data) {
   function webspark_superhero_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
 
     if ($instance['widget']['type'] == 'webspark_superhero_form') {
-      dpm($form, 'Form');
-      dpm($form_state, 'form state in widget_form');
-      dpm($element, 'element in form');
-      // Make it a multipart form
-      //$form['#attributes']['enctype'] = 'multipart/form-data';
+      $style = '';
+      $image = array('jpg jpeg png gif');
+      $vids = array('mp4 ogv webm');
+
+      $sets = array();
+      if(isset($items[0]['field_settings'])) {
+        $sets = drupal_json_decode($items[0]['field_settings']);
+        if($sets['super_type']!='slider'&& $sets['super_type']!=NULL && $delta > 0) {
+          $style = 'style="display: none;"';
+        }
+      }
+      /*
+      if(isset($sets['super_type'])&&$sets['super_type']=='video') {
+        $sup_type = $vids;
+      } else {
+        $sup_type = $image;
+      }*/
+
+      if($delta > 0) {
+        $element['#prefix'] = '<div class="superhero_select" '.$style.'>';
+        $element['#suffix'] = '</div>';
+      }
 
       // Define the element
       $element['title'] = array(
@@ -395,14 +509,12 @@ function webspark_superhero_field_settings_form($field, $instance, $has_data) {
       );
 
       $element['fid'] = array(
-      '#title' => t('File'),
-      '#type' => 'managed_file',
-      '#upload_location' => file_field_widget_uri($field, $instance),
-      '#default_value' => isset($items[$delta]['fid']) ? $items[$delta]['fid'] : NULL,
-        '#upload_validators' => array(
-          'file_validate_extensions' => array('mp4 ogg jpg jpeg png gif'),
-          'file_validate_size' => array(32*1024*1024),
-        ),
+        '#title' => t('File'),
+        '#type' => 'managed_file',
+        '#field_prefix' => '<div id="superhero_file_field'.$delta.'">',
+        '#field_suffix' => '</div>',
+        '#upload_location' => file_field_widget_uri($field, $instance),
+        '#default_value' => isset($items[$delta]['fid']) ? $items[$delta]['fid'] : NULL,
       );
 
       $element['alt'] = array(
@@ -462,14 +574,11 @@ function webspark_superhero_field_settings_form($field, $instance, $has_data) {
 
       $element['field_settings'] = array(
         '#title' => t('Field Settings'),
-        '#type' => 'hidden',
-        '#value' => '0',//this will definitely need to be changed
-        '#prefix' => '<div id="field_settings_hidden">',
+        '#type' => 'hidden',//this will definitely need to be changed
+        '#prefix' => '<div id="field_settings_hidden'.$delta.'">',
         '#suffix' => '</div>',
-        '#default_value' => isset($encoded_loc) ? $encoded_loc : NULL,
+        '#default_value' => isset($items[0]['field_settings']) ? $items[0]['field_settings'] : NULL,
       );
-
-
     }
 
     return $element;
@@ -481,17 +590,14 @@ function webspark_superhero_field_settings_form($field, $instance, $has_data) {
   */
   function webspark_superhero_field_validate($entity_type, $entity, $field, $instance, $langcode, $items, &$errors) {
 
-
     foreach ($items as $delta => $item) {
       if (!webspark_superhero_field_is_empty($item, $field) && empty($item['fid'])) {
 
         $errors[$field['field_name']][$langcode][$delta][] = array(
-        'error' => 'hero_image_required',
-        'message' => t('!name field is required.', array('!name' => t('Image'))),
+          'error' => 'hero_image_required',
+          'message' => t('!name field is required.', array('!name' => t('Image'))),
         );
       }
-
-
     }
   }
 
@@ -501,7 +607,7 @@ function webspark_superhero_field_settings_form($field, $instance, $has_data) {
   function webspark_superhero_field_presave($entity_type, $entity, $field, $instance, $langcode, &$items) {
     // We need to set presave values if fids are not set. This shouldn't effect save operations
     // form API validation will prevent this from ever happening unless previewing.
-    //dpm($items, 'items in presave');
+
     if (!empty($items)) {
 
       foreach ($items as &$item) {
@@ -537,10 +643,7 @@ function webspark_superhero_field_settings_form($field, $instance, $has_data) {
   */
   function webspark_superhero_field_insert($entity_type, $entity, $field, $instance, $langcode, &$items) {
     file_field_insert($entity_type, $entity, $field, $instance, $langcode, $items);
-
-
      variable_set('panopoly_magic_live_preview', 1);
-
   }
 
   /**
@@ -578,6 +681,7 @@ function webspark_superhero_field_settings_form($field, $instance, $has_data) {
   function webspark_superhero_field_prepare_view($entity_type, $entities, $field, $instances, $langcode, &$items) {
     // If there are no files specified at all, use the default.
     // TODO - make sure this works
+    /*
     foreach ($entities as $id => $entity) {
       if (empty($items[$id]) && $field['settings']['default_image']) {
         if ($file = file_load($field['settings']['default_image'])) {
@@ -588,5 +692,5 @@ function webspark_superhero_field_settings_form($field, $instance, $has_data) {
           );
         }
       }
-    }
+    }*/
   }

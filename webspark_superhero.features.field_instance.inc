@@ -1,8 +1,7 @@
 <?php
 /**
  * @file
- * webspark_superhero
- .features.field_instance.inc
+ * webspark_superhero.features.field_instance.inc
  */
 
 /**
@@ -22,7 +21,7 @@ function webspark_superhero_field_default_field_instances() {
         'label' => 'hidden',
         'module' => 'webspark_superhero',
         'settings' => array(
-          'image_style' => 'hero_bg_img',
+          'image_style' => 'webspark_hero',
         ),
         'type' => 'webspark_superhero',
         'weight' => 0,

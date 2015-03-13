@@ -3,7 +3,13 @@
 *
 */
 
-(function ($, Drupal) {
+(function ($) {
+
+	$.fn.clean_up = function(data) {
+
+			$(".superhero_1").remove();
+  };
+
 	Drupal.behaviors.webspark_hero = {
 		attach: function(context, settings) {
 
@@ -11,7 +17,7 @@
 			$(".pane-bundle-hero").addClass( "hero-bg-img");
 
 
-
+			/*
 			$(function() {
 					$('.form-item-field-webspark-hero-bgimg-und-0 :file').change(function() {
 
@@ -28,10 +34,10 @@
 					$("#panopoly-form-widget-preview").before("<style> .hero-bg-img {background-image: url("+e.target.result+");}</style>");
 
 			};
-
+			*/
 
 
 
 		}
 	};
-})(jQuery, Drupal);
+})(jQuery);

@@ -14,7 +14,7 @@ dependencies[] = link
 dependencies[] = panopoly_widgets
 dependencies[] = text
 stylesheets[all][] = css/superhero.css
-
+scripts[] = js/superhero.js
 ;explanation = Field type(s) in use - see <a href="/admin/reports/fields">Field list</a>
 ;features[features_api][] = api:2
 features[field_base][] = field_superhero_items

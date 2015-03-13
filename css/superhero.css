@@ -185,3 +185,8 @@ body .flexslider {
 	}
 
 }
+
+
+.field-type-webspark-superhero .tabledrag-handle {
+  display: none;
+}
